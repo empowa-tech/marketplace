@@ -1,0 +1,442 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+"""
+Ensures value is within boundaries. If used on lists, applies to every item.
+"""
+directive @range(
+  """
+  The maximum value (inclusive) to allow. If null, no upper limit is applied
+  """
+  max: Float = null
+  """
+  The minimum value (inclusive) to allow. If null, no lower limit is applied
+  """
+  min: Float = null
+  """How to handle validation errors"""
+  policy: RangeValidateDirectivePolicy = RESOLVER
+) on ARGUMENT_DEFINITION | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | OBJECT
+
+type CardanoSummit2023 {
+  _id: GraphQLObjectId!
+  last_updated: Int
+  policy_id: String!
+  stake_address: String!
+  total_assets: Int
+  total_received: Float
+}
+
+type CardanoSummit2023PrizeDraw {
+  asset_id: String!
+  email: String!
+}
+
+input CardanoSummit2023PrizeDrawInput {
+  asset_id: String!
+  email: String!
+}
+
+type CardanoSummit2023PrizeDrawResponse {
+  results: [CardanoSummit2023PrizeDraw]!
+  total: Int!
+}
+
+type CardanoSummit2023Stat {
+  owner: String
+  unique_combination: Int
+}
+
+type CardanoSummit2023StatResponse {
+  results: [CardanoSummit2023Stat]!
+  total: Int!
+}
+
+type Claim {
+  _id: GraphQLObjectId!
+  ada_expiry: DateTime
+  ada_transaction_hash: String
+  amount: Float
+  emp_expiry: DateTime
+  emp_transaction_hash: String
+  reward: Reward
+  status: ClaimStatus
+  type: ClaimType
+}
+
+input ClaimInput {
+  ada_expiry: DateTime
+  ada_transaction_hash: String
+  status: ClaimInputStatus
+  type: ClaimType
+}
+
+enum ClaimInputStatus {
+  CREATED
+}
+
+enum ClaimStatus {
+  ADA_EXPIRED
+  COMPLETED
+  CREATED
+  EMP_EXPIRED
+  FAILED
+  INVALID
+  PENDING
+}
+
+enum ClaimType {
+  FAUCET
+  REWARD
+}
+
+input CollateralNFTInput {
+  amount: Int!
+  collateral_emp_value: Int!
+  payment_tx_expiry: DateTime!
+  payment_tx_hash: String!
+  presale_access_assets: [String!]
+  series: String!
+}
+
+type CollateralType {
+  emp_value: Float!
+  image_ipfs: IPFSObject!
+  video_ipfs: IPFSObject
+}
+
+"""DateTime is a mongodb Datetime in ISO format"""
+scalar DateTime
+
+"""GraphQLObjectId is a mongodb ObjectId. String of 12 or 24 hex chars"""
+scalar GraphQLObjectId
+
+type HousingProject {
+  _id: GraphQLObjectId!
+  description: String
+  housing_partner: String
+  image: String
+  location: HousingProjectLocation
+  name: String
+  no_of_housees: Int
+  short_description: String
+  slug: String
+  status: String
+}
+
+type HousingProjectLocation {
+  city: String
+  country: String
+}
+
+type IPFSObject {
+  cid: String
+  type: String
+}
+
+type ImpactProject {
+  _id: GraphQLObjectId!
+  description: String!
+  housing_projects: [HousingProject]
+  image: String!
+  name: String!
+  nft_collections: [NftCollection]
+  short_description: String!
+  slug: String!
+}
+
+type ImpactProjectResponse {
+  results: [ImpactProject]!
+  total: Int!
+}
+
+type LPContribution {
+  epoch: Int!
+  fcnft: Boolean!
+  points: String!
+}
+
+type LiquidityDriveDeposit {
+  _id: GraphQLObjectId!
+  deposit_expiry: DateTime!
+  deposit_tx_hash: String
+  djed_amount: Float
+  emp_amount: Float
+  stake_key: String
+  status: String
+}
+
+input LiquidityDriveDepositInput {
+  deposit_expiry: DateTime!
+  deposit_tx_hash: String!
+  djed_amount: Float!
+  emp_amount: Float!
+  stake_key: String!
+  status: String!
+}
+
+type LiquidityDriveDepositResponse {
+  results: [LiquidityDriveDeposit]!
+  total: Int!
+}
+
+type LiquidityDriveMember {
+  _id: GraphQLObjectId!
+  djed_amount: Float
+  djed_rewards: Float
+  emp_amount: Float
+  emp_rewards: Float
+  lp_tokens: Float
+  stake_key: String
+}
+
+type LiquidityDriveMemberResponse {
+  results: [LiquidityDriveMember]!
+  total: Int!
+}
+
+type LiquidityProvider {
+  address: String!
+  lp_contributions: [LPContribution]!
+}
+
+type MarketplaceAppConfig {
+  fee_oracle_address: String!
+  fee_oracle_asset: String!
+  protocol_owner_address: String!
+  script_address: String!
+}
+
+type MintNFT {
+  _id: GraphQLObjectId!
+  amount: Int!
+  assets: [NFTPolicyAsset!]
+  collateral_emp_value: Int!
+  mint_tx_expiry: DateTime
+  mint_tx_hash: String
+  payment_tx_expiry: DateTime!
+  payment_tx_hash: String!
+  series: String!
+  status: MintNFTStatus!
+}
+
+type MintNFTResponse {
+  results: [MintNFT]!
+  total: Int!
+}
+
+enum MintNFTStatus {
+  COMPLETED
+  CREATED
+  CREATED_S
+  EXPIRED
+  FAILED
+  INVALID
+  PENDING
+}
+
+type Mutation {
+  insert_cardano_summit_2023_prize_draw(input: CardanoSummit2023PrizeDrawInput!): CardanoSummit2023PrizeDraw
+  insert_claim(input: ClaimInput!): Claim
+  insert_collateral_nft_sale(input: CollateralNFTInput!): MintNFT
+  insert_liquidity_drive_deposit(input: LiquidityDriveDepositInput!): LiquidityDriveDeposit
+}
+
+type NFTPolicyAsset {
+  asset: String!
+  asset_name: String!
+  fingerprint: String!
+  onchain_metadata: PolicyAssetOnChainMetadata!
+  policy_id: String!
+  quantity: String!
+}
+
+type NftCollection {
+  _id: GraphQLObjectId!
+  description: String
+  filter_attributes: [NftCollectionAttribute]
+  has_reward: Boolean
+  image: String
+  marketplace_sale: Boolean
+  name: String!
+  policy_id: String
+  primary_sale: Boolean
+  primary_sales: [PrimarySale!]
+  short_description: String
+  slug: String
+}
+
+type NftCollectionAttribute {
+  key: String
+  name: String
+  value: [NftCollectionAttributeKV]
+}
+
+type NftCollectionAttributeKV {
+  key: String
+  name: String
+  value: String
+}
+
+enum OperationType {
+  EQUALS
+  GREATER_THAN
+  GREATER_THAN_EQUALS
+  IN
+  LESS_THAN
+  LESS_THAN_EQUALS
+  REGEX_MATCH
+  SEARCH
+}
+
+type PolicyAsset {
+  _id: GraphQLObjectId!
+  asset: String
+  asset_name: String
+  extend: [PolicyAssetExtend!]
+  fingerprint: String
+  last_activity: PolicyAssetActivities
+  mint_or_burn_count: Int
+  onchain_metadata: PolicyAssetOnChainMetadata
+  policy_id: String
+  quantity: String
+  reward_stats: RewardStats
+}
+
+type PolicyAssetActivities {
+  _id: GraphQLObjectId!
+  ada_expiry: DateTime!
+  ada_transaction_hash: String
+  asset_name: String
+  policy_asset: PolicyAsset!
+  policy_id: String
+  price: Float
+  receiver_address: String
+  status: String
+  type: String
+}
+
+type PolicyAssetExtend {
+  _id: GraphQLObjectId!
+  is_sale: Boolean!
+  policy_asset: PolicyAsset!
+  price: Float
+  seller_address: String
+}
+
+type PolicyAssetMetadataFile {
+  mediaType: String
+  name: String
+  src: String
+}
+
+type PolicyAssetOnChainMetadata {
+  cardanoPhase: String
+  characteristics: String
+  continent: String
+  description: String
+  empValue: String
+  files: [PolicyAssetMetadataFile]
+  image: String
+  mediaType: String
+  name: String
+  privilegeLevel: String
+}
+
+type PolicyAssetResponse {
+  results: [PolicyAsset]!
+  total: Int!
+}
+
+type Presale {
+  eligible_nfts: [PresaleEligible!]
+  end_time: DateTime!
+  name: String!
+  start_time: DateTime!
+}
+
+type PresaleEligible {
+  attribute_name: String
+  attribute_values: [String!]
+  eligible_assets: [String!]
+  policy_id: String!
+  used_assets: [String!]
+}
+
+type PrimarySale {
+  config: PrimarySaleConfig!
+  series: String!
+  stats: PrimarySaleStats
+}
+
+type PrimarySaleConfig {
+  collateral_types: [CollateralType!]
+  currency: String!
+  currency_asset_id: String!
+  presales: [Presale!]
+  public_start_time: DateTime!
+  sale_address: String!
+  sale_quantity_limit: Int
+  sale_target: Float!
+}
+
+type PrimarySaleStats {
+  amount_raised: Float!
+  assets_minted: Int!
+}
+
+type Query {
+  cardano_summit_2023: CardanoSummit2023
+  cardano_summit_2023_prize_draw(and: [WhereInput], limit: Int = 10, or: [WhereInput], page: Int = 0, sort: [SortInput] = [{by: "_id", type: DESC}]): CardanoSummit2023PrizeDrawResponse
+  cardano_summit_2023_world_nft_eligible: CardanoSummit2023StatResponse
+  cardano_summit_2023_world_nft_owned: CardanoSummit2023StatResponse
+  claims(and: [WhereInput], limit: Int = 10, or: [WhereInput], page: Int = 0, sort: [SortInput]): [Claim]
+  impact_projects(and: [WhereInput], limit: Int = 10, or: [WhereInput], page: Int = 0, sort: [SortInput] = [{by: "slug", type: ASC}]): ImpactProjectResponse
+  liquidity_providers(address: String!): LiquidityProvider
+  marketplace_config: MarketplaceAppConfig
+  mint_nfts(and: [WhereInput], limit: Int = 10, or: [WhereInput], page: Int = 0, sort: [SortInput]): MintNFTResponse
+  policy_assets(and: [WhereInput], limit: Int = 10, or: [WhereInput], page: Int = 0, sort: [SortInput] = [{by: "extend.price", type: DESC}, {by: "activities.ada_expiry", type: DESC}]): PolicyAssetResponse
+  policy_assets_with_fetch(assets: [String]): [PolicyAsset]
+  rewards(and: [WhereInput], limit: Int = 10, or: [WhereInput], page: Int = 0, sort: [SortInput]): [Reward]
+}
+
+enum RangeValidateDirectivePolicy {
+  """
+  Field resolver is responsible to evaluate it using `validationErrors` injected in GraphQLResolverInfo
+  """
+  RESOLVER
+  """
+  Field resolver is not called if occurs a validation error, it throws `UserInputError`
+  """
+  THROW
+}
+
+type Reward {
+  _id: GraphQLObjectId!
+  identifier: String!
+  source: String!
+  unclaimed_balance: Float!
+}
+
+type RewardStats {
+  claimed: Float!
+  unclaimed: Float!
+}
+
+input SortInput {
+  by: String
+  type: SortType
+}
+
+enum SortType {
+  ASC
+  DESC
+}
+
+input WhereInput {
+  key: String
+  operator: OperationType!
+  value: String
+  values: [String]
+}

@@ -51,16 +51,37 @@ class MarketplaceContract implements MarketplaceContractModel {
     return utxos
   }
 
-  public async list(asset: string, price: number) {
+  private async getWalletInfo() {
     try {
-      // Get all required data
-      const { scriptAddress, network } = this.config
-      const { policyId: assetPolicyId, assetName: assetAssetName } = parseAssetUnit(asset)
-      const txBuilder = this.getTxBuilder()
-      const sellerAddress = await this.wallet.getUsedAddresses().then((addresses) => addresses[0])
+      const utxos = await this.wallet.getUtxos()
+      const walletAddress = await this.wallet.getUsedAddresses().then((addresses) => addresses[0])
       const stakeAddress = await this.wallet.getRewardAddresses().then((addresses) => addresses[0])
       const changeAddress = await this.wallet.getChangeAddress()
-      const utxos = await this.wallet.getUtxos()
+      const collateralUTxO = await this.wallet.getCollateral().then((utxos) => utxos[0])
+      const networkId = await this.wallet.getNetworkId()
+
+      if (!collateralUTxO) throw new Error('No collateral found in connected wallet. Please setup collateral first.')
+
+      return {
+        utxos,
+        networkId,
+        changeAddress,
+        collateralUTxO,
+        walletAddress,
+        stakeAddress,
+      }
+    } catch (error) {
+      throw error as Error
+    }
+  }
+
+  public async list(asset: string, price: number) {
+    try {
+      // Get all required information
+      const txBuilder = this.getTxBuilder()
+      const { scriptAddress, network } = this.config
+      const { policyId: assetPolicyId, assetName: assetAssetName } = parseAssetUnit(asset)
+      const { utxos, stakeAddress, changeAddress, walletAddress: sellerAddress } = await this.getWalletInfo()
       const assetUTxO = await this.getUTxOs(utxos, asset).then((utxos) => utxos[0])
       const datumData = constructDatumData(+price, assetPolicyId, assetAssetName, sellerAddress, stakeAddress)
 
@@ -86,6 +107,7 @@ class MarketplaceContract implements MarketplaceContractModel {
 
   public async buy(asset: string) {
     try {
+      // Get all required information
       const {
         scriptAddress,
         feeOracleAddress,
@@ -95,16 +117,17 @@ class MarketplaceContract implements MarketplaceContractModel {
         feePercentage,
         tokenAsset = 'lovelace',
       } = this.config
-      const networkId = getNetworkId(network)
       const txBuilder = this.getTxBuilder()
-
-      const utxos = await this.wallet.getUtxos()
+      const {
+        utxos,
+        collateralUTxO,
+        changeAddress,
+        walletAddress: buyerAddress,
+        networkId,
+      } = await this.getWalletInfo()
       const assetUTxO = await this.getUTxOs(scriptAddress, asset).then((utxos) => utxos[0])
       const feeOracleAssetUTxO = await this.getUTxOs(feeOracleAddress, feeOracleAsset).then((utxos) => utxos[0])
       const scriptRefUTxO = await this.getUTxOs(scriptAddress).then((utxos) => utxos[0])
-      const collateralUTxO = await this.wallet.getCollateral().then((utxos) => utxos[0])
-      const buyerAddress = await this.wallet.getUsedAddresses().then((addresses) => addresses[0])
-      const changeAddress = await this.wallet.getChangeAddress()
       const pubKeyHash = resolvePaymentKeyHash(buyerAddress)
 
       const inputDatum = deserializeDatum(assetUTxO.output.plutusData!)
@@ -117,7 +140,6 @@ class MarketplaceContract implements MarketplaceContractModel {
 
       // validate
       if (!assetUTxO) throw new Error('No asset UTxO found from script address')
-      if (!collateralUTxO) throw new Error('No collateral UTxO found in users wallet. Please setup collateral first.')
       if (!scriptRefUTxO) throw new Error('No script reference UTxO found from script address')
       if (!feeOracleAssetUTxO) throw new Error('No fee oracle UTxO found from fee oracle address')
 
@@ -147,9 +169,7 @@ class MarketplaceContract implements MarketplaceContractModel {
         .complete()
 
       const signedTx = await this.wallet.signTx(unsignedTx, true)
-      const txHash = this.wallet.submitTx(signedTx)
-
-      return txHash
+      return this.wallet.submitTx(signedTx)
     } catch (error) {
       throw new Error()
     }
@@ -157,42 +177,37 @@ class MarketplaceContract implements MarketplaceContractModel {
 
   public async update(asset: string, price: number) {
     try {
+      // Get all required information
       const { scriptAddress, network } = this.config
       const { policyId: assetPolicyId, assetName: assetAssetName } = parseAssetUnit(asset)
+      const { utxos, collateralUTxO, changeAddress, walletAddress: sellerAddress } = await this.getWalletInfo()
 
       const txBuilder = this.getTxBuilder()
-      const utxos = await this.wallet.getUtxos()
       const assetUTxO = await this.getUTxOs(scriptAddress, asset).then((utxos) => utxos[0])
       const scriptRefUTxO = await this.getUTxOs(scriptAddress).then((utxos) => utxos[0])
-      const collateralUTxO = await this.wallet.getCollateral().then((utxos) => utxos[0])
-      const sellerAddress = await this.wallet.getUsedAddresses().then((addresses) => addresses[0])
-      const changeAddress = await this.wallet.getChangeAddress()
       const stakeAddress = await this.wallet.getRewardAddresses().then((addresses) => addresses[0])
       const pubKeyHash = resolvePaymentKeyHash(sellerAddress)
       const datumData = constructDatumData(+price, assetPolicyId, assetAssetName, sellerAddress, stakeAddress)
 
+      // validate
       if (!assetUTxO) throw new Error('No asset UTxO found in script address')
-      if (!collateralUTxO) throw new Error('No collateral UTxO found in users wallet. Please setup collateral first.')
       if (!scriptRefUTxO) throw new Error('No script reference UTxO found from script address')
 
+      // build, sign & submit tx
       const unsignedTx = await txBuilder
         .setNetwork(network)
         .txInCollateral(collateralUTxO.input.txHash, collateralUTxO.input.outputIndex)
-
         .spendingPlutusScriptV2()
         .txIn(assetUTxO.input.txHash, assetUTxO.input.outputIndex)
         .txInInlineDatumPresent()
         .txInRedeemerValue(mConStr1([]))
         .spendingTxInReference(scriptRefUTxO.input.txHash, scriptRefUTxO.input.outputIndex)
-
         .txOut(scriptAddress, [{ unit: asset, quantity: '1' }])
         .txOutInlineDatumValue(JSON.stringify(datumData), 'JSON')
-
         .changeAddress(changeAddress)
         .selectUtxosFrom(utxos)
         .requiredSignerHash(pubKeyHash)
         .complete()
-
       const signedTx = await this.wallet.signTx(unsignedTx, true)
       const txHash = this.wallet.submitTx(signedTx)
 
@@ -207,20 +222,14 @@ class MarketplaceContract implements MarketplaceContractModel {
       // setup
       const { scriptAddress, network } = this.config
       const txBuilder = this.getTxBuilder()
-      const utxos = await this.wallet.getUtxos()
-      const sellerAddress = await this.wallet.getUsedAddresses().then((addresses) => addresses[0])
-      const changeAddress = await this.wallet.getChangeAddress()
-      const collateralUTxO = await this.wallet.getCollateral().then((utxos) => utxos[0])
+      const { utxos, collateralUTxO, changeAddress, walletAddress: sellerAddress } = await this.getWalletInfo()
       const assetUTxO = await this.getUTxOs(scriptAddress, asset).then((utxos) => utxos[0])
       const scriptRefUTxO = await this.getUTxOs(scriptAddress).then((utxos) => utxos[0])
       const pubKeyHash = resolvePaymentKeyHash(sellerAddress)
 
       // validate
-      if (!utxos.length) throw new Error('No asset found in script address')
       if (!assetUTxO) throw new Error('No asset found in script address')
-      if (!collateralUTxO) throw new Error('No collateral found in users wallet. Please setup collateral first.')
       if (!scriptRefUTxO) throw new Error('No script reference UTxO found from script address')
-      if (!pubKeyHash) throw new Error('No pub key hash found from receiver address')
 
       // build, sign & submit tx
       const unsignedTx = await txBuilder
@@ -240,11 +249,8 @@ class MarketplaceContract implements MarketplaceContractModel {
         .selectUtxosFrom(utxos)
         .requiredSignerHash(pubKeyHash)
         .complete()
-
       const signedTx = await this.wallet.signTx(unsignedTx)
-      const txHash = await this.wallet.submitTx(signedTx)
-
-      return txHash
+      return await this.wallet.submitTx(signedTx)
     } catch (error) {
       throw error
     }

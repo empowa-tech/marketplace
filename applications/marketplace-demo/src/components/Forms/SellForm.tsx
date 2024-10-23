@@ -5,25 +5,21 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { LoadingButton } from '@mui/lab'
 import { Box, FormControl, InputLabel, OutlinedInput } from '@mui/material'
 import { AccountBalanceWallet as AccountBalanceWalletIcon } from '@mui/icons-material'
-import PriceCalculation from '@/components/Marketplace/_internal/PriceCalculation'
-import {
-  MarketplaceFormDefaultValues,
-  MarketplaceOperationType,
-  MarketplaceSubmitFormData,
-} from '@/components/Marketplace/types'
+import { OperationType } from '@empowa-tech/common'
+import { PriceCalculator } from '@/components/'
+import { FormDefaultValues, FormSubmitData } from './types'
 
 const schema = object({
-  asset: string().required(),
   price: number().min(0.1).required(),
-  type: mixed<MarketplaceOperationType>().oneOf(Object.values(MarketplaceOperationType)).required(),
+  type: mixed<OperationType>().oneOf(Object.values(OperationType)).required(),
 })
 
 interface ListFormProps {
   feePercentage: number
-  defaultValues: MarketplaceFormDefaultValues
+  defaultValues: FormDefaultValues
   submitting: boolean
   disabled: boolean
-  onSubmit: (data: MarketplaceSubmitFormData) => void
+  onSubmit: (data: FormSubmitData) => void
 }
 
 function SellForm({ feePercentage, defaultValues, submitting, disabled, onSubmit }: ListFormProps) {
@@ -70,7 +66,7 @@ function SellForm({ feePercentage, defaultValues, submitting, disabled, onSubmit
           />
         </FormControl>
       </Box>
-      {watch('price') > 0 && <PriceCalculation price={watch('price')} feePercentage={feePercentage} />}
+      {watch('price') > 0 && <PriceCalculator price={watch('price')} feePercentage={feePercentage} />}
       <Box>
         <LoadingButton
           loadingPosition="start"
@@ -79,9 +75,8 @@ function SellForm({ feePercentage, defaultValues, submitting, disabled, onSubmit
           type="submit"
           loading={submitting}
           disabled={disabled}
-          loadingIndicator={'Submitting...'}
         >
-          Submit
+          Sell
         </LoadingButton>
       </Box>
     </form>

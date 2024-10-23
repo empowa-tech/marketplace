@@ -2,14 +2,14 @@ import { useCallback } from 'react'
 import { FieldValues, useForm } from 'react-hook-form'
 import { LoadingButton } from '@mui/lab'
 import { AccountBalanceWallet as AccountBalanceWalletIcon } from '@mui/icons-material'
-import { Box } from '@mui/material'
-import { MarketplaceFormDefaultValues, MarketplaceSubmitFormData } from '../types'
+import Box from '@mui/material/Box'
+import { FormDefaultValues, FormSubmitData } from './types'
 
 interface BuyFormProps {
-  defaultValues: MarketplaceFormDefaultValues
+  defaultValues: FormDefaultValues
   submitting: boolean
   disabled: boolean
-  handleSubmit: (data: MarketplaceSubmitFormData) => void
+  handleSubmit: (data: FormSubmitData) => void
 }
 
 function BuyForm({ defaultValues, submitting, disabled, handleSubmit }: BuyFormProps) {
@@ -20,7 +20,7 @@ function BuyForm({ defaultValues, submitting, disabled, handleSubmit }: BuyFormP
 
   const onSubmit = useCallback(
     (data: FieldValues): void => {
-      handleSubmit(data as MarketplaceSubmitFormData)
+      handleSubmit(data as FormSubmitData)
     },
     [handleSubmit],
   )

@@ -1,3 +1,5 @@
+import React from 'react'
+import { PolicyAsset } from '@/gql/graphql'
 import { usePolicyAssets } from '@/components/PolicyAssets/hooks'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -7,23 +9,31 @@ import CardMedia from '@mui/material/CardMedia'
 import Image from 'next/image'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
-import React from 'react'
-import { replaceIpfsWithGatewayUrl } from '@/utils'
+import { replaceIpfsWithGatewayUrl } from '@empowa-tech/common'
 import { NextLinkComposed } from '@/components'
-import { PolicyAsset } from '@/graphql/_generated/graphql'
+import { IPFS_GATEWAY_URL, TOKEN_LABEL } from '@/constants'
 
-function PolicyAssetsItem({ onchain_metadata }: PolicyAsset) {
+function Item({ onchain_metadata, extend }: PolicyAsset) {
+  const { price } = extend?.[0] || { price: undefined }
+
   return (
     <Card sx={{ height: '100%' }}>
       <CardActionArea>
         {onchain_metadata?.image && (
           <CardMedia sx={{ position: 'relative', height: 300 }}>
             <Image
-              src={replaceIpfsWithGatewayUrl(onchain_metadata.image)}
+              src={replaceIpfsWithGatewayUrl(onchain_metadata.image, IPFS_GATEWAY_URL)}
               alt="Policy Asset thumbnail image"
               fill={true}
               style={{ objectFit: 'cover' }}
             />
+            {price && (
+              <Box sx={{ bgcolor: 'secondary.main', position: 'absolute', top: 8, left: 0, px: 3, py: 1 }}>
+                <Typography sx={{ color: 'common.white' }}>
+                  1{price} {TOKEN_LABEL}
+                </Typography>
+              </Box>
+            )}
           </CardMedia>
         )}
         <CardContent>
@@ -47,8 +57,10 @@ function PolicyAssets({ policyId }: PolicyAssetsProps) {
 
   if (error) throw error
 
-  const total = data?.policyAssets?.total || 0
-  const assets = data?.policyAssets?.results as PolicyAsset[]
+  const total = data?.policy_assets?.total || 0
+  const assets = data?.policy_assets?.results as PolicyAsset[]
+
+  if (assets?.length === 0) return <>No assets found</>
 
   return (
     <>
@@ -60,7 +72,7 @@ function PolicyAssets({ policyId }: PolicyAssetsProps) {
           <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={asset._id}>
             <Box component={'article'} sx={{ height: '100%' }}>
               <NextLinkComposed to={`/asset/${asset.asset}`} sx={{ textDecoration: 'none' }}>
-                <PolicyAssetsItem {...asset} />
+                <Item {...asset} />
               </NextLinkComposed>
             </Box>
           </Grid>

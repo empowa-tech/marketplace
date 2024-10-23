@@ -1,6 +1,6 @@
-import { PolicyAsset, PolicyAssetResponse } from '@/graphql/_generated/graphql'
 import { ApolloError } from '@apollo/client'
-import { MarketplaceConfig } from '@empowa-tech/common'
+import { MarketplaceConfig, OperationType } from '@empowa-tech/common'
+import { FormSubmitData } from '@/components/Forms/types'
 
 export enum MarketplaceContext {
   Buyer = 'BUYER',
@@ -18,39 +18,14 @@ export enum MarketplaceStatus {
   Invalid = 'INVALID',
 }
 
-export enum MarketplaceOperationType {
-  Buy = 'BUY',
-  Sell = 'SELL',
-  Update = 'UPDATE',
-  Cancel = 'CANCEL',
-}
-
-export interface MarketplaceTransactionBaseParams {
-  asset: string
-}
-
-export interface MarketplaceFormDefaultValues {
-  asset: string
-  price: number
-  type: MarketplaceOperationType
-}
-
-export interface MarketplaceSubmitFormData {
-  asset: string
-  price?: number
-  type: MarketplaceOperationType
-}
-
-export type ApiDataResponse = PolicyAssetResponse
-export type ApiData = PolicyAsset
-
 export interface Data {
+  id: string
   asset: string
   context: MarketplaceContext
   price: number
   sellerAddress: string | undefined
   status: MarketplaceStatus | undefined
-  type: MarketplaceOperationType | undefined
+  type: OperationType | undefined
 }
 
 export interface MarketplaceHook {
@@ -58,5 +33,8 @@ export interface MarketplaceHook {
   data: Data | undefined
   loading: boolean
   error: ApolloError | Error | undefined
-  handleSubmit: (formData: MarketplaceSubmitFormData) => void
+  submitting: boolean
+  txSigning: boolean
+  txSignError: Error | undefined
+  handleSubmit: (formData: FormSubmitData) => void
 }

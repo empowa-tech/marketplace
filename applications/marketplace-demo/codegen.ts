@@ -14,22 +14,16 @@ const typescriptConfig = {
 }
 
 const config: CodegenConfig = {
-  schema: [GRAPHQL_ENDPOINT],
-  documents: ['src/graphql/fragments/**.ts', 'src/graphql/queries/**.ts', 'src/**/query.ts', 'src/**/queries.ts'],
+  schema: GRAPHQL_ENDPOINT,
+  documents: ['src/queries/**.ts', 'src/**/queries.ts', 'src/pages/**/*.tsx'],
   overwrite: true,
   ignoreNoDocuments: true, // for better experience with the watcher
   generates: {
-    './src/graphql/_generated/': {
+    './src/gql/': {
       preset: 'client',
       config: {
-        ...typescriptConfig
+        ...typescriptConfig,
       },
-    },
-    './schema.graphql': {
-      plugins: ['schema-ast'],
-      config: {
-        includeDirectives: true
-      }
     },
   },
 }

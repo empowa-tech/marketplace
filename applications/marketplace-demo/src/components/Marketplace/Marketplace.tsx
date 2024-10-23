@@ -1,18 +1,18 @@
-import { MarketplaceContext, MarketplaceOperationType } from './types'
+import { MarketplaceContext } from './types'
 import { useMarketplace } from './hooks'
 import Box from '@mui/material/Box'
-import SellForm from '@/components/Marketplace/_internal/SellForm'
-import EditSaleForm from '@/components/Marketplace/_internal/EditSaleForm'
-import BuyForm from '@/components/Marketplace/_internal/BuyForm'
-import Status from '@/components/Marketplace/_internal/Status'
 import Typography from '@mui/material/Typography'
+import { OperationType } from '@empowa-tech/common'
+import { SellForm, EditSaleForm, BuyForm } from '@/components'
+import MarketplaceApiStatus from './MarketplaceApiStatus'
+import MarketplaceTransactionStatus from './MarketplaceTransactionStatus'
 
 interface MarketplaceProps {
   asset: string
 }
 
 function Marketplace({ asset }: MarketplaceProps) {
-  const { data, loading, error, handleSubmit } = useMarketplace({ asset })
+  const { data, loading, error, submitting, txSigning, txSignError, handleSubmit } = useMarketplace({ asset })
 
   if (loading) return <>Getting Marketplace information...</>
   if (error) return <>Error getting Marketplace information</>
@@ -23,36 +23,42 @@ function Marketplace({ asset }: MarketplaceProps) {
           <EditSaleForm
             feePercentage={0.2}
             defaultValues={{
-              asset: data.asset,
               price: data.price,
-              type: MarketplaceOperationType.Update,
+              type: OperationType.Update,
             }}
             lastKnownType={data.type!}
-            submitting={false}
-            disabled={false}
+            submitting={submitting}
+            disabled={submitting}
             handleSubmit={handleSubmit}
           />
         ) : data.context === MarketplaceContext.Buyer ? (
           <BuyForm
-            defaultValues={{ asset: data.asset, price: data.price, type: MarketplaceOperationType.Buy }}
-            submitting={false}
-            disabled={false}
+            defaultValues={{ price: data.price, type: OperationType.Buy }}
+            submitting={submitting}
+            disabled={submitting}
             handleSubmit={handleSubmit}
           />
         ) : data.context === MarketplaceContext.Owner ? (
-          <SellForm
-            feePercentage={0.2}
-            defaultValues={{ asset: data.asset, price: data.price, type: MarketplaceOperationType.Sell }}
-            submitting={false}
-            disabled={false}
-            onSubmit={handleSubmit}
-          />
+          <>
+            <SellForm
+              feePercentage={0.2}
+              defaultValues={{ price: data.price, type: OperationType.Sell }}
+              submitting={submitting}
+              disabled={submitting}
+              onSubmit={handleSubmit}
+            />
+          </>
         ) : (
-          <Typography>This Asset is not for sale yet.</Typography>
+          <Typography>This asset is not for sale yet.</Typography>
+        )}
+        {(txSigning || txSignError) && (
+          <Box mt={2}>
+            <MarketplaceTransactionStatus txSigning={txSigning} txSignError={txSignError} />
+          </Box>
         )}
         {data.status && (
-          <Box>
-            <Status status={data.status} />
+          <Box mt={2}>
+            <MarketplaceApiStatus status={data.status} />
           </Box>
         )}
       </>

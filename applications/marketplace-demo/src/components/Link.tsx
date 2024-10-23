@@ -35,3 +35,5 @@ export const NextLinkComposed = React.forwardRef<HTMLAnchorElement, NextLinkComp
     )
   },
 )
+
+export default NextLinkComposed

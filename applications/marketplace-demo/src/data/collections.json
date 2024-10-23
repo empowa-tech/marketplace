@@ -1,28 +1,10 @@
 {
   "collections": [
     {
-      "name": "Cardano Summit 2023",
+      "name": "Happy Feet",
       "description": "Fulfilling the vision of Blockchain for Social Impact",
-      "image": "/images/collection-cardano-summit-2023.jpg",
-      "policyId": "0a27e032288446357530c3042ccffc6aa7c5fcf6fb64b8af3eaced02"
-    },
-    {
-      "name": "Collateral NFT Launch",
-      "description": "Support affordable housing and earn $EMP",
-      "image": "/images/collection-collateral.webp",
-      "policyId": "8df08e041e9109c4b5ac2307800dc6949eaf03912353f060e3bf2917"
-    },
-    {
-      "name": "Empowa Founding Community",
-      "description": "Exclusive Empowa privileges to our Founding Community",
-      "image": "/images/collection-fcnft.jpg",
-      "policyId": "7f00f4b4857116787ad58e13818acc03fcde0e6583e3d349e29eb3a5"
-    },
-    {
-      "name": "Empowa World Mobile Seed",
-      "description": "A RealFi NFT with Real World Impact in Housing and Connectivity",
-      "image": "/images/collection-empowa-world-mobile.png",
-      "policyId": "28c380222b13ebd7ac76d751e54205179ea065f90acbc95ecafad129"
+      "image": "/collection.webp",
+      "policyId": "2cbcdc3a9a766a1bd475dda1068d3eae85e090795d318b4387563c59"
     }
   ]
 }

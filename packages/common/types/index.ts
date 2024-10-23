@@ -9,3 +9,10 @@ export interface MarketplaceConfig {
   tokenAsset?: string
   network: BlockfrostSupportedNetworks
 }
+
+export enum OperationType {
+  Buy = 'BUY',
+  Sell = 'SELL',
+  Update = 'UPDATE',
+  Cancel = 'CANCEL',
+}

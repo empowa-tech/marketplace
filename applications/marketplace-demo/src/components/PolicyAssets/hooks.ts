@@ -1,13 +1,9 @@
 import { ApolloError, useQuery } from '@apollo/client'
-import { POLICY_ASSETS_QUERY } from './queries'
-import { PolicyAssetResponse } from '@/graphql/_generated/graphql'
-
-interface Data {
-  policyAssets: PolicyAssetResponse
-}
+import { POLICY_ASSETS_QUERY } from '@/queries'
+import { OperationType, PolicyAssetsQuery } from '@/gql/graphql'
 
 interface UsePolicyAssets {
-  data: Data
+  data: PolicyAssetsQuery | undefined
   loading: boolean
   error: ApolloError | Error | undefined
 }
@@ -22,14 +18,14 @@ export function usePolicyAssets({ policyId }: UsePolicyAssetsProps): UsePolicyAs
       and: {
         key: 'policy_id',
         value: policyId,
-        operator: 'EQUALS',
+        operator: OperationType.Equals,
       },
-      limit: 1000,
+      limit: 100,
     },
   })
 
   return {
-    data: data!.policyAssets!.results,
+    data,
     loading,
     error,
   }

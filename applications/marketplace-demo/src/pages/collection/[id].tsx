@@ -1,23 +1,23 @@
-import { GetStaticPropsContext } from "next";
+import { GetStaticPropsContext } from 'next'
 import dynamic from 'next/dynamic'
-import Head from "next/head";
-import Image from "next/image";
-import { ErrorBoundary } from "react-error-boundary";
-import { Layout } from "@/components";
-import Box from "@mui/material/Box";
-import Container from "@mui/material/Container";
-import Typography from "@mui/material/Typography";
+import Head from 'next/head'
+import Image from 'next/image'
+import { ErrorBoundary } from 'react-error-boundary'
+import Box from '@mui/material/Box'
+import Container from '@mui/material/Container'
+import Typography from '@mui/material/Typography'
 import collectionData from '@/data/collections.json'
+import { Layout } from '@/components'
 
 const PolicyAssets = dynamic(() => import('@/components/PolicyAssets'), {
   loading: () => <p>Loading...</p>,
-  ssr: false // Disable SSR for this component if it relies on browser APIs
-});
+  ssr: false, // Disable SSR for this component if it relies on browser APIs
+})
 
 interface Collection {
-  name: string,
-  description: string,
-  image: string,
+  name: string
+  description: string
+  image: string
   policyId: string
 }
 
@@ -33,29 +33,27 @@ function CollectionPage({ data }: CollectionPageProps) {
       </Head>
       <Layout>
         <Box component="section" mb={2} sx={{ position: 'relative', height: 300 }}>
-          <Image src={data.image} alt={data.name} fill={true} style={{ objectFit: "cover" }} />
+          <Image src={data.image} alt={data.name} fill={true} style={{ objectFit: 'cover' }} />
           <Container>
             <Box
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                height: "100%",
-                width: "100%",
-                color: "white",
-                position: "absolute"
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                height: '100%',
+                width: '100%',
+                color: 'white',
+                position: 'absolute',
               }}
             >
               <Typography component="h1" variant="h2">
                 {data.name}
               </Typography>
-              <Typography>
-                {data.description}
-              </Typography>
+              <Typography>{data.description}</Typography>
             </Box>
           </Container>
         </Box>
-        <Box component={"section"} bgcolor={"grey.50"} py={4}>
+        <Box component={'section'} bgcolor={'grey.50'} py={4}>
           <Container>
             <Box component="header" mb={2}>
               <Typography component="h2" variant="h4">
@@ -71,11 +69,11 @@ function CollectionPage({ data }: CollectionPageProps) {
         </Box>
       </Layout>
     </>
-  );
+  )
 }
 
 export async function getStaticPaths() {
-  const paths = collectionData.collections.map(collection => ({
+  const paths = collectionData.collections.map((collection) => ({
     params: { id: collection.policyId },
   }))
 
@@ -83,7 +81,7 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }: GetStaticPropsContext) {
-  const data = collectionData.collections.find(collection => collection.policyId === params!.id)
+  const data = collectionData.collections.find((collection) => collection.policyId === params!.id)
 
   return { props: { data } }
 }

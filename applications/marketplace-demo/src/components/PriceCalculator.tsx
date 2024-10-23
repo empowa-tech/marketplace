@@ -2,10 +2,22 @@ import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
-import { calculateFeeAmount, calculateSellerAmount } from '@/components/Marketplace/utils'
+import { calcFromLovelace, calcToLovelace } from '@empowa-tech/common'
 
-function PriceCalculation({ price, feePercentage }: { price: number; feePercentage: number }) {
-  console.log(price, feePercentage)
+const calculateFeeAmount = (price: number, feePercentage: number) => {
+  const priceInLovelace = calcToLovelace(price)
+  const feePriceInLovelace = priceInLovelace * feePercentage
+
+  return calcFromLovelace(feePriceInLovelace)
+}
+
+const calculateSellerAmount = (price: number, feePercentage: number) => {
+  const priceLovelace = calcToLovelace(price)
+  const feePriceLovelace = priceLovelace * feePercentage
+  return calcFromLovelace(priceLovelace - feePriceLovelace)
+}
+
+function PriceCalculator({ price, feePercentage }: { price: number; feePercentage: number }) {
   const calculatedFullPrice = calculateSellerAmount(price, feePercentage)
   const defaultFeePrice = calculateFeeAmount(calculatedFullPrice, feePercentage)
   const defaultEarningPrice = calculatedFullPrice
@@ -48,4 +60,4 @@ function PriceCalculation({ price, feePercentage }: { price: number; feePercenta
   )
 }
 
-export default PriceCalculation
+export default PriceCalculator

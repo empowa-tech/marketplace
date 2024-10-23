@@ -1,4 +1,5 @@
 import { LOVELACE_AMOUNT } from '../constants'
+import { Network } from '@meshsdk/core'
 
 export const calcToLovelace = (amount: number) => {
   return amount * LOVELACE_AMOUNT
@@ -22,4 +23,8 @@ export const calcSellerAmount = (price: number, feePercentage: number): number =
   const feePriceLovelace = priceLovelace * feeMultiplier
 
   return calcFromLovelace(priceLovelace - feePriceLovelace)
+}
+
+export const replaceIpfsWithGatewayUrl = (ipfsUrl: string, gatewayUrl: string) => {
+  return ipfsUrl.replace('ipfs://', gatewayUrl + '/')
 }

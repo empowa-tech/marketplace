@@ -1,35 +1,8 @@
-import moment from 'moment'
-import {
-  Data,
-  ApiData,
-  MarketplaceContext,
-  MarketplaceOperationType,
-  MarketplaceStatus,
-} from '@/components/Marketplace/types'
+import { Data, MarketplaceContext, MarketplaceStatus } from '@/components/Marketplace/types'
 import { Asset } from '@meshsdk/core'
 import { defaultPolicyAssetExtend, defaultPolicyAssetLastActivity } from '@/components/Marketplace/constants'
-import { calcToLovelace, calcFromLovelace } from '@empowa-tech/common'
-
-export function calculateFeeAmount(price: number, feePercentage: number) {
-  const priceInLovelace = calcToLovelace(price)
-  const feePriceInLovelace = priceInLovelace * feePercentage
-
-  return calcFromLovelace(feePriceInLovelace)
-}
-
-export function calculateSellerAmount(price: number, feePercentage: number) {
-  const priceLovelace = calcToLovelace(price)
-  const feePriceLovelace = priceLovelace * feePercentage
-  return calcFromLovelace(priceLovelace - feePriceLovelace)
-}
-
-/**
- * Get Expiration Date
- * @param hours
- */
-export const getExpirationDate = (hours = 6): string => {
-  return moment().utc().add(hours, 'hour').toISOString()
-}
+import { PolicyAssetActivityQuery } from '@/gql/graphql'
+import { OperationType } from '@empowa-tech/common'
 
 /**
  * Get Context Type
@@ -58,25 +31,29 @@ export const getContextType = (
   }
 }
 
-export const mutateApiData = (apiData: ApiData, walletAddress: string, walletAssets: Asset[]): Data => {
-  const apiDataExtend = apiData?.extend?.[0] || defaultPolicyAssetExtend
-  const apiDataLastActivity = apiData?.last_activity || defaultPolicyAssetLastActivity
+export const transformData = (
+  apiData: PolicyAssetActivityQuery,
+  walletAddress: string,
+  walletAssets: Asset[],
+): Data => {
+  const policyAsset = apiData?.policy_assets?.results?.[0]
+  const apiDataExtend = policyAsset?.extend?.[0] || defaultPolicyAssetExtend
+  const apiDataLastActivity = policyAsset?.last_activity || defaultPolicyAssetLastActivity
 
-  const asset = apiData.asset || ''
+  const id = policyAsset?._id || ''
+  const asset = policyAsset?.asset || ''
   const isSale = apiDataExtend.is_sale
   const sellerAddress = apiDataExtend.seller_address as string
   const status = apiDataLastActivity.status as MarketplaceStatus
-  const type = apiDataLastActivity.type as MarketplaceOperationType
+  const type = apiDataLastActivity.type as OperationType
   const receiverAddress = apiDataLastActivity.receiver_address
   let price = apiDataExtend.price || 0
   const priceFromLastActivity = apiDataLastActivity.price
 
   const statusInProgress = [MarketplaceStatus.Pending, MarketplaceStatus.Created].includes(status as MarketplaceStatus)
-  const typeBuyerInProgress = [MarketplaceOperationType.Buy].includes(type as MarketplaceOperationType)
-  const typeSellerInProgress = [MarketplaceOperationType.Update, MarketplaceOperationType.Cancel].includes(
-    type as MarketplaceOperationType,
-  )
-  const typeOwnerInProgress = [MarketplaceOperationType.Sell].includes(type as MarketplaceOperationType)
+  const typeBuyerInProgress = [OperationType.Buy].includes(type as OperationType)
+  const typeSellerInProgress = [OperationType.Update, OperationType.Cancel].includes(type as OperationType)
+  const typeOwnerInProgress = [OperationType.Sell].includes(type as OperationType)
 
   // if listed on marketplace: extend is always available and updated
   const isAssetOfOwnerDefault = !!walletAssets.find((a) => a.unit === asset)
@@ -98,6 +75,7 @@ export const mutateApiData = (apiData: ApiData, walletAddress: string, walletAss
   }
 
   return {
+    id,
     asset,
     context,
     price,

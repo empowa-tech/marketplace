@@ -5,22 +5,23 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { AccountBalanceWallet as AccountBalanceWalletIcon } from '@mui/icons-material'
 import { Box, Button, ButtonGroup, FormControl, InputLabel, OutlinedInput } from '@mui/material'
 import { LoadingButton } from '@mui/lab'
-import { MarketplaceOperationType, MarketplaceSubmitFormData, MarketplaceFormDefaultValues } from '../types'
-import PriceCalculation from './PriceCalculation'
+import { OperationType } from '@empowa-tech/common'
+import { FormSubmitData, FormDefaultValues } from './types'
+import { PriceCalculator } from '@/components'
 
 interface EditSaleFormProps {
   feePercentage: number
-  defaultValues: MarketplaceFormDefaultValues
-  lastKnownType: MarketplaceOperationType
+  defaultValues: FormDefaultValues
+  lastKnownType: OperationType
   submitting: boolean
   disabled: boolean
-  handleSubmit: (data: MarketplaceSubmitFormData) => void
+  handleSubmit: (data: FormSubmitData) => void
 }
 
 const updateSchema = object({
   price: number().min(0.1).required(),
   asset: string().required(),
-  type: mixed<MarketplaceOperationType>().oneOf(Object.values(MarketplaceOperationType)).required(),
+  type: mixed<OperationType>().oneOf(Object.values(OperationType)).required(),
 })
 
 function CancelOrUpdateSaleForm({
@@ -33,7 +34,7 @@ function CancelOrUpdateSaleForm({
   const { handleSubmit: submitHandler } = useForm({
     defaultValues: {
       ...defaultValues,
-      type: MarketplaceOperationType.Cancel,
+      type: OperationType.Cancel,
     },
   })
 
@@ -41,7 +42,7 @@ function CancelOrUpdateSaleForm({
 
   const onSubmit = useCallback(
     (data: FieldValues): void => {
-      handleSubmit(data as MarketplaceSubmitFormData)
+      handleSubmit(data as FormSubmitData)
     },
     [handleSubmit],
   )
@@ -85,15 +86,15 @@ function UpdateSaleForm({
     resolver: yupResolver(updateSchema),
     defaultValues: {
       ...defaultValues,
-      type: MarketplaceOperationType.Update,
+      type: OperationType.Update,
     },
   })
 
-  const { asset, price } = defaultValues
+  const { price } = defaultValues
 
   const onSubmit = useCallback(
     (data: FieldValues): void => {
-      handleSubmit(data as MarketplaceSubmitFormData)
+      handleSubmit(data as FormSubmitData)
     },
     [handleSubmit],
   )
@@ -123,11 +124,10 @@ function UpdateSaleForm({
             onChange={handleChange}
           />
           <input type="hidden" value={price} {...register('price')} />
-          <input type="hidden" value={asset} {...register('asset')} />
-          <input type="hidden" value={MarketplaceOperationType.Update} {...register('type')} />
+          <input type="hidden" value={OperationType.Update} {...register('type')} />
         </FormControl>
       </Box>
-      {watch('price') > 0 && <PriceCalculation price={price} feePercentage={feePercentage} />}
+      {watch('price') > 0 && <PriceCalculator price={price} feePercentage={feePercentage} />}
       <Box>
         <ButtonGroup variant="contained" aria-label="outlined primary button group">
           <LoadingButton
@@ -151,7 +151,7 @@ function UpdateSaleForm({
 
 function EditSaleForm({ lastKnownType, submitting, defaultValues, ...props }: EditSaleFormProps) {
   const defaultEditMode = useMemo(() => {
-    const isUpdating = lastKnownType === MarketplaceOperationType.Update
+    const isUpdating = lastKnownType === OperationType.Update
     return isUpdating && submitting
   }, [lastKnownType, submitting])
 
@@ -168,7 +168,7 @@ function EditSaleForm({ lastKnownType, submitting, defaultValues, ...props }: Ed
   if (editMode) {
     return (
       <UpdateSaleForm
-        defaultValues={{ ...defaultValues, type: MarketplaceOperationType.Update }}
+        defaultValues={{ ...defaultValues, type: OperationType.Update }}
         submitting={submitting}
         handleCancelEdit={handleCancelEdit}
         {...props}
@@ -177,7 +177,7 @@ function EditSaleForm({ lastKnownType, submitting, defaultValues, ...props }: Ed
   }
   return (
     <CancelOrUpdateSaleForm
-      defaultValues={{ ...defaultValues, type: MarketplaceOperationType.Cancel }}
+      defaultValues={{ ...defaultValues, type: OperationType.Cancel }}
       submitting={submitting}
       handleEdit={handleEdit}
       {...props}

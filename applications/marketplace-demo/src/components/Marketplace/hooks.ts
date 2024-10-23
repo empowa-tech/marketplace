@@ -1,27 +1,20 @@
-import { useQuery } from '@apollo/client'
+import { useMutation, useQuery } from '@apollo/client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAddress, useAssets, useWallet } from '@meshsdk/react'
+import { useAddress, useAssets, useNetwork, useWallet } from '@meshsdk/react'
 import { BlockfrostProvider } from '@meshsdk/core'
 import { MarketplaceContract } from '@empowa-tech/marketplace-contract'
-import { blockfrostApiKey } from '@/constants'
-import { MARKETPLACE_CONFIG_QUERY, POLICY_ASSETS_SALE_ACTIVITY_QUERY } from './queries'
+import { OperationType } from '@empowa-tech/common'
+import { BLOCKFROST_API_KEY } from '@/constants'
+import { handleUnknownError } from '@/utils'
 import {
-  Data,
-  MarketplaceSubmitFormData,
-  MarketplaceHook,
-  MarketplaceOperationType,
-  // MarketplaceTransactionBaseParams,
-  // MarketplaceStatus,
-} from './types'
-import {
-  // getExpirationDate,
-  mutateApiData,
-} from './utils'
-// import { MarketplaceAppConfig } from '@/graphql/_generated/graphql'
-
-interface UseMarketplaceProps {
-  asset: string
-}
+  MARKETPLACE_CONFIG_QUERY,
+  SINGLE_POLICY_ASSET_ACTIVITY_MUTATION,
+  SINGLE_POLICY_ASSET_ACTIVITY_QUERY,
+} from '@/queries'
+import { Data, MarketplaceHook, MarketplaceStatus } from './types'
+import { transformData } from './utils'
+import { OperationType as GraphQlOperationType } from '@/gql/graphql'
+import { FormSubmitData } from '@/components/Forms/types'
 
 function useFetchMarketplaceConfig() {
   const response = useQuery(MARKETPLACE_CONFIG_QUERY)
@@ -31,11 +24,12 @@ function useFetchMarketplaceConfig() {
 
 function useMarketplaceContract() {
   const config = useFetchMarketplaceConfig()
+  const network = useNetwork()
   const { wallet } = useWallet()
 
   return useMemo(() => {
-    if (config && wallet) {
-      const provider = new BlockfrostProvider(blockfrostApiKey)
+    if (config && wallet && typeof network === 'number') {
+      const provider = new BlockfrostProvider(BLOCKFROST_API_KEY)
       return new MarketplaceContract(
         {
           scriptAddress: config.script_address,
@@ -50,124 +44,162 @@ function useMarketplaceContract() {
         wallet,
       )
     }
-  }, [config, wallet])
+  }, [config, wallet, network])
 }
 
-export function useMarketplace({ asset }: UseMarketplaceProps): MarketplaceHook {
-  const [data, setData] = useState<Data | undefined>(undefined)
-  const { wallet } = useWallet()
-  const config = useFetchMarketplaceConfig()
+export function useMarketplaceTx() {
+  const [txId, setTxId] = useState<string | undefined>(undefined)
+  const [txSigning, setTxSigning] = useState<boolean>(false)
+  const [txSignError, setTxSignError] = useState<Error | undefined>(undefined)
+
   const contract = useMarketplaceContract()
-  const walletAddress = useAddress()
-  const walletAssets = useAssets()
 
-  console.log(contract)
+  const initTxBuilder = useCallback(
+    async (type: OperationType, asset: string, price?: number) => {
+      try {
+        if (!contract) throw new Error('Contract is not available')
 
-  /* queries & mutations */
-  const {
-    data: apiData,
-    loading,
-    error,
-  } = useQuery(POLICY_ASSETS_SALE_ACTIVITY_QUERY, {
-    variables: {
-      and: [{ key: 'asset', value: asset, operator: 'EQUALS' }],
-    },
-    pollInterval: 30000,
-  })
+        setTxId(undefined)
+        setTxSignError(undefined)
+        setTxSigning(true)
 
-  // const [onSubmitMutationHandler] = useMutation(mutation, {
-  //   onCompleted: () => {
-  //     void refetch()
-  //   },
-  // })
+        let txId = undefined
 
-  /* handlers */
-  const buildTransaction = useCallback(
-    (formData: MarketplaceSubmitFormData) => {
-      console.log(contract)
-      if (!contract) throw new Error('Contract is not available')
+        switch (type) {
+          case OperationType.Sell:
+            txId = await contract.list(asset, +price!)
+            break
+          case OperationType.Buy:
+            txId = await contract.buy(asset)
+            break
+          case OperationType.Cancel:
+            txId = await contract.cancel(asset)
+            break
+          case OperationType.Update:
+            txId = await contract.update(asset, +price!)
+            break
+          default:
+            throw new Error('Could not determine marketplace operation type')
+        }
 
-      const { asset, price, type } = formData
+        setTxId(txId)
+        return txId
+      } catch (e) {
+        const error = handleUnknownError(e as Error | string)
+        setTxSignError(error)
 
-      switch (type) {
-        case MarketplaceOperationType.Sell:
-          return contract.list(asset, price!)
-        case MarketplaceOperationType.Buy:
-          return contract.buy(asset)
-        case MarketplaceOperationType.Cancel:
-          return contract.cancel(asset)
-        case MarketplaceOperationType.Update:
-          return contract.update(asset, price!)
-        default:
-          throw new Error('Could not determine marketplace operation type')
+        throw error
+      } finally {
+        setTxSigning(false)
       }
     },
     [contract],
   )
 
+  return {
+    txId,
+    txSigning,
+    txSignError,
+    initTxBuilder,
+  }
+}
+
+export function useMarketplace({ asset }: { asset: string }): MarketplaceHook {
+  const [data, setData] = useState<Data | undefined>(undefined)
+  const [submitting, setSubmitting] = useState<boolean>(false)
+  const { wallet } = useWallet()
+  const config = useFetchMarketplaceConfig()
+  const { txSigning, txSignError, initTxBuilder } = useMarketplaceTx()
+  const walletAddress = useAddress()
+  const walletAssets = useAssets()
+
+  const {
+    data: apiData,
+    loading: loading,
+    error: error,
+    refetch,
+  } = useQuery(SINGLE_POLICY_ASSET_ACTIVITY_QUERY, {
+    variables: {
+      and: [{ key: 'asset', value: asset, operator: GraphQlOperationType.Equals }],
+    },
+    pollInterval: 30000,
+  })
+
+  const [onSubmitMutationHandler] = useMutation(SINGLE_POLICY_ASSET_ACTIVITY_MUTATION, {
+    onCompleted: () => {
+      void refetch()
+    },
+  })
+
+  /**
+   * Handle form submission
+   * Build & Sign tx
+   * API Mutation
+   */
   const handleSubmit = useCallback(
-    async (formData: MarketplaceSubmitFormData) => {
+    async (formData: FormSubmitData) => {
       try {
         if (!wallet) throw new Error('BrowserWallet is not available')
+        if (!walletAddress) throw new Error('WalletAddress is not available')
+        if (!formData) throw new Error('Cannot find FormData')
+        if (!data) throw new Error('Cannot find Data')
 
-        const transactionId = await buildTransaction(formData)
+        const { id, asset } = data
+        const { price, type } = formData
+        const txId = await initTxBuilder(type, asset, price)
 
-        if (!transactionId) throw new Error('Transaction ID is not valid')
+        if (!txId) throw new Error('Transaction ID is not valid')
 
-        // const { asset, price, type } = formData
+        void onSubmitMutationHandler({
+          variables: {
+            policyAsset: id,
+            type,
+            price: +price!,
+            adaTransactionHash: txId,
+            receiverAddress: walletAddress,
+          },
+        })
 
-        // const mutationData = {
-        //   ada_expiry: getExpirationDate(),
-        //   ada_transaction_hash: transactionId,
-        //   price: +price!,
-        //   receiver_address: walletAddress,
-        //   status: MarketplaceStatus.Created,
-        //   type,
-        //   policy_asset: {
-        //     link: asset,
-        //   },
-        // }
-        //
-        // await onSubmitMutationHandler({
-        //   variables: {
-        //     data: mutationData,
-        //   },
-        // })
+        setSubmitting(true)
       } catch (e) {
-        let error = 'An error occurred while signing the transaction'
-
-        if (typeof e === 'string') {
-          error = e as unknown as Error['message']
-        } else {
-          const errorObj = e as Error
-          error = errorObj?.message
-        }
+        const error = handleUnknownError(e as Error | string)
 
         // eslint-disable-next-line no-console
         console.error(error)
       }
     },
-    [
-      // onSubmitMutationHandler,
-      buildTransaction,
-      contract,
-      wallet,
-      walletAddress,
-    ],
+    [data, wallet, walletAddress, initTxBuilder, onSubmitMutationHandler],
   )
 
+  /**
+   * Set submitting state based on api status or transaction state
+   */
   useEffect(() => {
-    if (apiData && contract && walletAddress && walletAssets) {
-      const data = mutateApiData(apiData.policy_assets.results[0], walletAddress, walletAssets)
+    if (txSigning || data?.status === MarketplaceStatus.Created || data?.status === MarketplaceStatus.Pending) {
+      setSubmitting(true)
+    } else {
+      setSubmitting(false)
+    }
+  }, [txSigning, data?.status])
+
+  /**
+   * Set data based on api response
+   */
+  useEffect(() => {
+    if (apiData && walletAddress && walletAssets) {
+      const data = transformData(apiData, walletAddress, walletAssets)
       setData(data)
     }
-  }, [apiData, contract, walletAddress, walletAssets])
+  }, [apiData, walletAddress, walletAssets])
 
   return {
     config,
     data,
     loading,
     error,
+    submitting,
+    txSigning,
+    txSignError,
     handleSubmit,
   }
 }

@@ -1,22 +1,22 @@
 import type { GetStaticProps, GetStaticPaths } from 'next'
+import dynamic from 'next/dynamic'
 import Head from 'next/head'
 import Image from 'next/image'
-import { gql } from '@apollo/client'
 import Container from '@mui/material/Container'
 import Grid from '@mui/material/Grid2'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import collectionsData from '@/data/collections.json'
-import { PolicyAsset } from '@/graphql/_generated/graphql'
-import { POLICY_ASSETS_FIELDS } from '@/graphql/fragments/policyAssets'
+import { PolicyAsset } from '@/gql/graphql'
 import client from '@/services/apollo-client'
-import { replaceIpfsWithGatewayUrl } from '@/utils'
+import { replaceIpfsWithGatewayUrl } from '@empowa-tech/common'
 import { Layout } from '@/components'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import dynamic from 'next/dynamic'
 import { ErrorBoundary } from 'react-error-boundary'
 import AuthWall from '@/components/AuthWall'
+import { POLICY_ASSETS_IDS_QUERY, SINGLE_POLICY_ASSET_QUERY } from '@/queries/policyAssets'
+import { IPFS_GATEWAY_URL } from '@/constants'
 
 const Marketplace = dynamic(() => import('@/components/Marketplace'), {
   loading: () => <Typography>Loading Marketplace Content...</Typography>,
@@ -36,7 +36,7 @@ function AssetPage({ asset, onchain_metadata }: PolicyAsset) {
               {onchain_metadata?.image && (
                 <Box sx={{ position: 'relative', height: '100%', pb: '100%' }}>
                   <Image
-                    src={replaceIpfsWithGatewayUrl(onchain_metadata?.image)}
+                    src={replaceIpfsWithGatewayUrl(onchain_metadata?.image, IPFS_GATEWAY_URL)}
                     alt="Policy Asset thumbnail image"
                     fill={true}
                   />
@@ -54,7 +54,7 @@ function AssetPage({ asset, onchain_metadata }: PolicyAsset) {
               <Card>
                 <CardContent>
                   <ErrorBoundary fallback={<Typography>Failed to load marketplace content</Typography>}>
-                    <Typography variant="h6" component="h2" lineHeight={1.2} mb={4}>
+                    <Typography variant="h6" component="h2" lineHeight={1.2} mb={2}>
                       Sale Information
                     </Typography>
                     <AuthWall>
@@ -75,22 +75,14 @@ export const getStaticPaths = (async () => {
   const policyIds = collectionsData.collections.map((collection) => collection.policyId)
 
   const { data } = await client.query({
-    query: gql`
-      query GetPolicyAssets($policyIds: [String]) {
-        policy_assets(limit: 20000, and: [{ key: "policy_id", values: $policyIds, operator: IN }]) {
-          results {
-            asset
-          }
-        }
-      }
-    `,
+    query: POLICY_ASSETS_IDS_QUERY,
     variables: {
       policyIds,
     },
   })
 
-  const ids = data.policy_assets.results
-    .map((policyAsset: PolicyAsset) => policyAsset?.asset?.toString())
+  const ids = data?.policy_assets?.results
+    .map((policyAsset) => policyAsset?.asset?.toString())
     .filter(Boolean) as string[]
 
   const paths = ids.map((id) => ({ params: { id } }))
@@ -102,25 +94,16 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths
 
 export const getStaticProps = (async (context) => {
-  const id = context?.params?.id
+  const id = context?.params?.id as string
 
-  const { data: policyAssetApiData } = await client.query({
-    query: gql`
-      ${POLICY_ASSETS_FIELDS}
-      query GetPolicyAssets($id: String) {
-        policy_assets(limit: 1, and: [{ key: "asset", value: $id, operator: EQUALS }]) {
-          results {
-            ...PolicyAssetParts
-          }
-        }
-      }
-    `,
+  const { data } = await client.query({
+    query: SINGLE_POLICY_ASSET_QUERY,
     variables: {
       id,
     },
   })
 
-  const policyAsset = policyAssetApiData.policy_assets.results[0]
+  const policyAsset = data?.policy_assets?.results[0]
 
   return {
     props: {

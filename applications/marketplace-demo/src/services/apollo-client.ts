@@ -1,9 +1,9 @@
 import { ApolloClient, HttpLink, InMemoryCache } from '@apollo/client'
-import { apiEndpoint } from "@/constants";
+import { API_ENDPOINT } from '@/constants'
 
 const cache = new InMemoryCache()
 const link = new HttpLink({
-  uri: apiEndpoint,
+  uri: API_ENDPOINT,
 })
 
 const client = new ApolloClient({

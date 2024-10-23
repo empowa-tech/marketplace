@@ -77,8 +77,6 @@ class MarketplaceContract implements MarketplaceContractModel {
         .selectUtxosFrom(utxos)
         .complete()
 
-      console.log('unsignedTx', unsignedTx)
-
       const signedTx = await this.wallet.signTx(unsignedTx, false)
       return this.wallet.submitTx(signedTx)
     } catch (error) {

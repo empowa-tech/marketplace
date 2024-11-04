@@ -1,14 +1,5 @@
-import { resolvePaymentKeyHash, resolveStakeKeyHash, pubKeyAddress, Network } from '@meshsdk/core'
+import { resolvePaymentKeyHash, resolveStakeKeyHash, pubKeyAddress } from '@meshsdk/core'
 import { calcToLovelace } from '@empowa-tech/common'
-
-export const getNetworkId = (network: Network) => {
-  switch (true) {
-    case network === 'mainnet':
-      return 1
-    default:
-      return 0
-  }
-}
 
 export const constructDatumData = (
   price: number,

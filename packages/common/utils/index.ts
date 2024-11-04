@@ -1,5 +1,4 @@
 import { LOVELACE_AMOUNT } from '../constants'
-import { Network } from '@meshsdk/core'
 
 export const calcToLovelace = (amount: number) => {
   return amount * LOVELACE_AMOUNT
@@ -13,6 +12,8 @@ export const calcFeeAmount = (price: number, feePercentage: number): number => {
   const feeMultiplier = feePercentage / 100
   const priceInLovelace = calcToLovelace(price)
   const feePriceInLovelace = priceInLovelace * feeMultiplier
+
+  console.log(price, feePercentage, priceInLovelace, feeMultiplier)
 
   return calcFromLovelace(feePriceInLovelace)
 }

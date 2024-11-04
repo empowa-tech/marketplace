@@ -11,8 +11,15 @@ import {
   mConStr1,
 } from '@meshsdk/core'
 import type { MarketplaceContract as MarketplaceContractModel } from './MarketplaceContract.model'
-import { calcToLovelace, calcFeeAmount, calcSellerAmount, MarketplaceConfig } from '@empowa-tech/common'
-import { constructDatumData, getNetworkId } from './MarketplaceContract.utils'
+import {
+  calcToLovelace,
+  calcFeeAmount,
+  calcSellerAmount,
+  MarketplaceConfig,
+  calcFromLovelace,
+  LOVELACE_AMOUNT,
+} from '@empowa-tech/common'
+import { constructDatumData } from './MarketplaceContract.utils'
 
 class MarketplaceContract implements MarketplaceContractModel {
   private wallet: BrowserWallet
@@ -114,7 +121,6 @@ class MarketplaceContract implements MarketplaceContractModel {
         feeOracleAsset,
         protocolOwnerAddress,
         network,
-        feePercentage,
         tokenAsset = 'lovelace',
       } = this.config
       const txBuilder = this.getTxBuilder()
@@ -131,12 +137,21 @@ class MarketplaceContract implements MarketplaceContractModel {
       const pubKeyHash = resolvePaymentKeyHash(buyerAddress)
 
       const inputDatum = deserializeDatum(assetUTxO.output.plutusData!)
-      const sellerAddress = serializeAddressObj(inputDatum.fields[0], networkId)
+      // const sellerInputLovelace = assetUTxO.output.amount.find((a) => a.unit === 'lovelace')!.quantity
+      const sellerAddressObj = inputDatum.fields[1]
+      const sellerAddress = serializeAddressObj(sellerAddressObj, networkId)
+
+      const feeOracleDatum = deserializeDatum(feeOracleAssetUTxO.output.plutusData!)
+      const feePercentage = calcFromLovelace(feeOracleDatum.int) * 100
 
       // calculate fee & seller amount
-      const price = assetUTxO.output.amount.find((a) => a.unit === tokenAsset)!.quantity
-      const feeAmountInLovelace = Math.round(calcToLovelace(calcFeeAmount(+price, feePercentage)))
-      const sellerAmountInLovelace = Math.round(calcToLovelace(calcSellerAmount(+price, feePercentage)))
+      const price = calcFromLovelace(inputDatum.fields[0].int)
+      const sellerPriceLovelace = Math.round(calcToLovelace(calcSellerAmount(+price, feePercentage)))
+      let feeAmountLovelace = Math.round(calcToLovelace(calcFeeAmount(+price, feePercentage)))
+
+      if (feePercentage > 0 && feeAmountLovelace < LOVELACE_AMOUNT) {
+        feeAmountLovelace = LOVELACE_AMOUNT // min amount = 1 ADA
+      }
 
       // validate
       if (!assetUTxO) throw new Error('No asset UTxO found from script address')
@@ -147,23 +162,28 @@ class MarketplaceContract implements MarketplaceContractModel {
       const unsignedTx = await txBuilder
         .setNetwork(network)
 
-        .txInCollateral(collateralUTxO.input.txHash, collateralUTxO.input.outputIndex)
-        .readOnlyTxInReference(feeOracleAssetUTxO.input.txHash, feeOracleAssetUTxO.input.outputIndex) // REFERENCING ORACLE UTXO
-
         .spendingPlutusScriptV2()
-        .txIn(assetUTxO.input.txHash, assetUTxO.input.outputIndex)
+        .txIn(assetUTxO.input.txHash, assetUTxO.input.outputIndex, assetUTxO.output.amount, assetUTxO.output.address)
         .txInInlineDatumPresent()
         .txInRedeemerValue(mConStr0([]))
-        .spendingTxInReference(scriptRefUTxO.input.txHash, scriptRefUTxO.input.outputIndex)
 
-        // protocol pays full price
+        .spendingTxInReference(scriptRefUTxO.input.txHash, scriptRefUTxO.input.outputIndex)
+        .readOnlyTxInReference(feeOracleAssetUTxO.input.txHash, feeOracleAssetUTxO.input.outputIndex) // REFERENCING ORACLE UTXO
+
+        // buyer receives locked asset in script
         .txOut(buyerAddress, [{ unit: asset, quantity: '1' }])
-        // seller gets amount - fee
-        .txOut(sellerAddress, [{ unit: tokenAsset, quantity: sellerAmountInLovelace.toString() }])
-        // protocol owner gets fee
-        .txOut(protocolOwnerAddress, [{ unit: tokenAsset, quantity: feeAmountInLovelace.toString() }])
+        // seller gets amount minus fee from buyer
+        .txOut(sellerAddress, [{ unit: tokenAsset, quantity: sellerPriceLovelace.toString() }])
+        // protocol owner gets fee from seller
+        .txOut(protocolOwnerAddress, [{ unit: tokenAsset, quantity: feeAmountLovelace.toString() }])
 
         .changeAddress(changeAddress)
+        .txInCollateral(
+          collateralUTxO.input.txHash,
+          collateralUTxO.input.outputIndex,
+          collateralUTxO.output.amount,
+          collateralUTxO.output.address,
+        )
         .selectUtxosFrom(utxos)
         .requiredSignerHash(pubKeyHash)
         .complete()
@@ -171,7 +191,7 @@ class MarketplaceContract implements MarketplaceContractModel {
       const signedTx = await this.wallet.signTx(unsignedTx, true)
       return this.wallet.submitTx(signedTx)
     } catch (error) {
-      throw new Error()
+      throw error
     }
   }
 

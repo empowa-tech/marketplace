@@ -72,15 +72,22 @@ function CollectionPage({ data }: CollectionPageProps) {
   )
 }
 
-export async function getStaticPaths() {
-  const paths = collectionData.collections.map((collection) => ({
-    params: { id: collection.policyId },
-  }))
+// Used For Static Site Generation
+// export async function getStaticPaths() {
+//   const paths = collectionData.collections.map((collection) => ({
+//     params: { id: collection.policyId },
+//   }))
+//
+//   return { paths, fallback: false }
+// }
+//
+// export async function getStaticProps({ params }: GetStaticPropsContext) {
+//   const data = collectionData.collections.find((collection) => collection.policyId === params!.id)
+//
+//   return { props: { data } }
+// }
 
-  return { paths, fallback: false }
-}
-
-export async function getStaticProps({ params }: GetStaticPropsContext) {
+export async function getServerSideProps({ params }: GetStaticPropsContext) {
   const data = collectionData.collections.find((collection) => collection.policyId === params!.id)
 
   return { props: { data } }

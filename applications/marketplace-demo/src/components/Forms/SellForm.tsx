@@ -1,6 +1,6 @@
 import { useCallback, ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
-import { object, string, number, mixed } from 'yup'
+import { object, number, mixed } from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { LoadingButton } from '@mui/lab'
 import { Box, FormControl, InputLabel, OutlinedInput } from '@mui/material'

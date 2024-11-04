@@ -17,18 +17,33 @@ import { OperationType as GraphQlOperationType } from '@/gql/graphql'
 import { FormSubmitData } from '@/components/Forms/types'
 
 function useFetchMarketplaceConfig() {
-  const response = useQuery(MARKETPLACE_CONFIG_QUERY)
+  const walletNetwork = useNetwork()
+  const network = walletNetwork === 1 ? 'mainnet' : 'preprod'
 
-  return response?.data?.marketplace_config
+  const additionalConfig = {
+    fee_percentage: 2.5,
+    token_asset: 'lovelace',
+    network,
+  }
+
+  const { data } = useQuery(MARKETPLACE_CONFIG_QUERY)
+
+  return useMemo(() => {
+    if (data && network) {
+      return {
+        ...data.marketplace_config,
+        ...additionalConfig,
+      }
+    }
+  }, [data, network])
 }
 
 function useMarketplaceContract() {
   const config = useFetchMarketplaceConfig()
-  const network = useNetwork()
   const { wallet } = useWallet()
 
   return useMemo(() => {
-    if (config && wallet && typeof network === 'number') {
+    if (config && wallet) {
       const provider = new BlockfrostProvider(BLOCKFROST_API_KEY)
       return new MarketplaceContract(
         {
@@ -36,15 +51,15 @@ function useMarketplaceContract() {
           feeOracleAddress: config.fee_oracle_address,
           feeOracleAsset: config.fee_oracle_asset,
           protocolOwnerAddress: config.protocol_owner_address,
-          tokenAsset: '171163f05e4f30b6be3c22668c37978e7d508b84f83558e523133cdf74454d50',
-          feePercentage: 2.5,
+          tokenAsset: config.token_asset,
+          feePercentage: config.fee_percentage,
           network: 'preprod',
         },
         provider,
         wallet,
       )
     }
-  }, [config, wallet, network])
+  }, [config, wallet])
 }
 
 export function useMarketplaceTx() {
@@ -58,6 +73,8 @@ export function useMarketplaceTx() {
     async (type: OperationType, asset: string, price?: number) => {
       try {
         if (!contract) throw new Error('Contract is not available')
+
+        console.log(type, asset, price)
 
         setTxId(undefined)
         setTxSignError(undefined)
@@ -146,9 +163,12 @@ export function useMarketplace({ asset }: { asset: string }): MarketplaceHook {
 
         const { id, asset } = data
         const { price, type } = formData
+
         const txId = await initTxBuilder(type, asset, price)
 
         if (!txId) throw new Error('Transaction ID is not valid')
+
+        setSubmitting(true)
 
         void onSubmitMutationHandler({
           variables: {
@@ -159,8 +179,6 @@ export function useMarketplace({ asset }: { asset: string }): MarketplaceHook {
             receiverAddress: walletAddress,
           },
         })
-
-        setSubmitting(true)
       } catch (e) {
         const error = handleUnknownError(e as Error | string)
 

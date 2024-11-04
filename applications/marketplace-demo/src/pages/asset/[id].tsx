@@ -27,7 +27,7 @@ function AssetPage({ asset, onchain_metadata }: PolicyAsset) {
   return (
     <>
       <Head>
-        <title>{onchain_metadata?.name} | Marketplace Demo</title>
+        <title>{`${onchain_metadata?.name} | Marketplace Demo`}</title>
       </Head>
       <Layout>
         <Container>
@@ -53,14 +53,14 @@ function AssetPage({ asset, onchain_metadata }: PolicyAsset) {
 
               <Card>
                 <CardContent>
-                  <ErrorBoundary fallback={<Typography>Failed to load marketplace content</Typography>}>
-                    <Typography variant="h6" component="h2" lineHeight={1.2} mb={2}>
-                      Sale Information
-                    </Typography>
-                    <AuthWall>
+                  <Typography variant="h6" component="h2" lineHeight={1.2} mb={2}>
+                    Sale Information
+                  </Typography>
+                  <AuthWall>
+                    <ErrorBoundary fallback={<Typography>Failed to load content</Typography>}>
                       <Marketplace asset={asset!} />
-                    </AuthWall>
-                  </ErrorBoundary>
+                    </ErrorBoundary>
+                  </AuthWall>
                 </CardContent>
               </Card>
             </Grid>

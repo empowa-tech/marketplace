@@ -1,24 +1,26 @@
-import React, { FC, ReactNode } from 'react'
+import React, { ReactNode } from 'react'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Typography from '@mui/material/Typography'
 import { CardanoWallet, useNetwork, useWallet } from '@meshsdk/react'
 import { AlertTitle } from '@mui/material'
 
-interface Props {
+interface AuthWallProps {
   children: ReactNode
 }
 
-const Loading: FC = () => (
-  <>
-    <Typography component="h3" variant="body1" fontWeight="bold">
-      Authenticating
-    </Typography>
-    <p>Checking wallet connection...</p>
-  </>
-)
+function Loading() {
+  return (
+    <>
+      <Typography component="h3" variant="body1" fontWeight="bold">
+        Authenticating
+      </Typography>
+      <p>Checking wallet connection...</p>
+    </>
+  )
+}
 
-const TestnetAlert: FC = () => {
+function TestnetAlert() {
   return (
     <Snackbar open={true}>
       <Alert severity="error">
@@ -28,7 +30,7 @@ const TestnetAlert: FC = () => {
   )
 }
 
-function Connected({ children }: Props) {
+function Connected({ children }: AuthWallProps) {
   return <>{children}</>
 }
 
@@ -44,7 +46,7 @@ function Disconnected() {
   )
 }
 
-const AuthWall: FC<Props> = ({ children }) => {
+function AuthWall({ children }: AuthWallProps) {
   const { connected, connecting: loading } = useWallet()
   const walletNetwork = useNetwork()
 

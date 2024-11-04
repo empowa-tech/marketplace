@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useCallback, useMemo, useState } from 'react'
 import { FieldValues, useForm } from 'react-hook-form'
-import { mixed, number, object, string } from 'yup'
+import { mixed, number, object } from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { AccountBalanceWallet as AccountBalanceWalletIcon } from '@mui/icons-material'
 import { Box, Button, ButtonGroup, FormControl, InputLabel, OutlinedInput } from '@mui/material'
@@ -20,7 +20,6 @@ interface EditSaleFormProps {
 
 const updateSchema = object({
   price: number().min(0.1).required(),
-  asset: string().required(),
   type: mixed<OperationType>().oneOf(Object.values(OperationType)).required(),
 })
 
@@ -82,6 +81,7 @@ function UpdateSaleForm({
     register,
     handleSubmit: submitHandler,
     watch,
+    formState,
   } = useForm({
     resolver: yupResolver(updateSchema),
     defaultValues: {
@@ -92,21 +92,23 @@ function UpdateSaleForm({
 
   const { price } = defaultValues
 
-  const onSubmit = useCallback(
-    (data: FieldValues): void => {
-      handleSubmit(data as FormSubmitData)
-    },
-    [handleSubmit],
-  )
+  const onSubmit = (data: FieldValues): void => {
+    console.log(data)
+    handleSubmit(data as FormSubmitData)
+  }
 
   const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const value = event.currentTarget.value
     const cleanValue = value.replace(/[^1-9]/g, '')
 
+    console.log(value, cleanValue)
+
     if (cleanValue) {
       return cleanValue
     }
   }, [])
+
+  console.log(formState, watch('price'))
 
   return (
     <form onSubmit={submitHandler(onSubmit)}>
@@ -123,7 +125,6 @@ function UpdateSaleForm({
             {...register('price')}
             onChange={handleChange}
           />
-          <input type="hidden" value={price} {...register('price')} />
           <input type="hidden" value={OperationType.Update} {...register('type')} />
         </FormControl>
       </Box>

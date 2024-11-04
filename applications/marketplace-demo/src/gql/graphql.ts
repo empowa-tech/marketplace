@@ -138,12 +138,6 @@ export enum RangeValidateDirectivePolicy {
   Throw = 'THROW'
 }
 
-export type RewardStats = {
-  __typename?: 'RewardStats';
-  claimed: Scalars['Float']['output'];
-  unclaimed: Scalars['Float']['output'];
-};
-
 export type SortInput = {
   by?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<SortType>;

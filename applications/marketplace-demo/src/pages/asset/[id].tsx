@@ -1,7 +1,7 @@
 import type {
-  // GetStaticProps,
-  // GetStaticPaths
-  GetServerSideProps,
+  GetStaticProps,
+  GetStaticPaths,
+  // GetServerSideProps,
 } from 'next'
 import dynamic from 'next/dynamic'
 import Head from 'next/head'
@@ -10,20 +10,17 @@ import Container from '@mui/material/Container'
 import Grid from '@mui/material/Grid2'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-// import collectionsData from '@/data/collections.json'
-import { PolicyAsset } from '@/gql/graphql'
-import client from '@/services/apollo-client'
 import { replaceIpfsWithGatewayUrl } from '@empowa-tech/common'
 import { Layout } from '@/components'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import { ErrorBoundary } from 'react-error-boundary'
 import AuthWall from '@/components/AuthWall'
-import {
-  // POLICY_ASSETS_IDS_QUERY,
-  SINGLE_POLICY_ASSET_QUERY,
-} from '@/queries/policyAssets'
 import { IPFS_GATEWAY_URL } from '@/constants'
+import collectionsData from '@/data/collections.json'
+import { PolicyAsset } from '@/gql/graphql'
+import { POLICY_ASSETS_IDS_QUERY, SINGLE_POLICY_ASSET_QUERY } from '@/queries/policyAssets'
+import client from '@/services/apollo-client'
 
 const Marketplace = dynamic(() => import('@/components/Marketplace'), {
   loading: () => <Typography>Loading Marketplace Content...</Typography>,
@@ -78,30 +75,60 @@ function AssetPage({ asset, onchain_metadata }: PolicyAsset) {
   )
 }
 
-// Static Site Generation
-// export const getStaticPaths = (async () => {
-//   const policyIds = collectionsData.collections.map((collection) => collection.policyId)
-//
-//   const { data } = await client.query({
-//     query: POLICY_ASSETS_IDS_QUERY,
-//     variables: {
-//       policyIds,
-//     },
-//   })
-//
-//   const ids = data?.policy_assets?.results
-//     .map((policyAsset) => policyAsset?.asset?.toString())
-//     .filter(Boolean) as string[]
-//
-//   const paths = ids.map((id) => ({ params: { id } }))
-//
-//   return {
-//     fallback: false,
-//     paths,
-//   }
-// }) satisfies GetStaticPaths
-//
-// export const getStaticProps = (async (context) => {
+export default AssetPage
+
+/** ************************************************************* */
+
+/**
+ * Static Site Generation
+ */
+export const getStaticPaths = (async () => {
+  const policyIds = collectionsData.collections.map((collection) => collection.policyId)
+
+  const { data } = await client.query({
+    query: POLICY_ASSETS_IDS_QUERY,
+    variables: {
+      policyIds,
+    },
+  })
+
+  const ids = data?.policy_assets?.results
+    .map((policyAsset) => policyAsset?.asset?.toString())
+    .filter(Boolean) as string[]
+
+  const paths = ids.map((id) => ({ params: { id } }))
+
+  return {
+    fallback: false,
+    paths,
+  }
+}) satisfies GetStaticPaths
+
+export const getStaticProps = (async (context) => {
+  const id = context?.params?.id as string
+
+  const { data } = await client.query({
+    query: SINGLE_POLICY_ASSET_QUERY,
+    variables: {
+      id,
+    },
+  })
+
+  const policyAsset = data?.policy_assets?.results[0]
+
+  return {
+    props: {
+      id,
+      ...policyAsset,
+    },
+  }
+}) satisfies GetStaticProps
+
+/**
+ * Server Side Rendering
+ * In case we want to re-render data on every request
+ */
+// export const getServerSideProps = (async (context) => {
 //   const id = context?.params?.id as string
 //
 //   const { data } = await client.query({
@@ -118,26 +145,4 @@ function AssetPage({ asset, onchain_metadata }: PolicyAsset) {
 //       ...policyAsset,
 //     },
 //   }
-// }) satisfies GetStaticProps
-
-// Server Side Rendering
-export const getServerSideProps = (async (context) => {
-  const id = context?.params?.id as string
-
-  const { data } = await client.query({
-    query: SINGLE_POLICY_ASSET_QUERY,
-    variables: {
-      id,
-    },
-  })
-
-  const policyAsset = data?.policy_assets?.results[0]
-
-  return {
-    props: {
-      ...policyAsset,
-    },
-  }
-}) satisfies GetServerSideProps
-
-export default AssetPage
+// }) satisfies GetServerSideProps

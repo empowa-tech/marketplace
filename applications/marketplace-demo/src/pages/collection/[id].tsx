@@ -72,25 +72,30 @@ function CollectionPage({ data }: CollectionPageProps) {
   )
 }
 
-// Used For Static Site Generation
-// export async function getStaticPaths() {
-//   const paths = collectionData.collections.map((collection) => ({
-//     params: { id: collection.policyId },
-//   }))
-//
-//   return { paths, fallback: false }
-// }
-//
-// export async function getStaticProps({ params }: GetStaticPropsContext) {
-//   const data = collectionData.collections.find((collection) => collection.policyId === params!.id)
-//
-//   return { props: { data } }
-// }
+export default CollectionPage
 
-export async function getServerSideProps({ params }: GetStaticPropsContext) {
+/** ************************************************************* */
+
+export async function getStaticPaths() {
+  const paths = collectionData.collections.map((collection) => ({
+    params: { id: collection.policyId },
+  }))
+
+  return { paths, fallback: false }
+}
+
+export async function getStaticProps({ params }: GetStaticPropsContext) {
   const data = collectionData.collections.find((collection) => collection.policyId === params!.id)
 
   return { props: { data } }
 }
 
-export default CollectionPage
+/**
+ * Server Side Rendering
+ * In case we want to re-render data on every request
+ */
+// export async function getServerSideProps({ params }: GetStaticPropsContext) {
+//   const data = collectionData.collections.find((collection) => collection.policyId === params!.id)
+//
+//   return { props: { data } }
+// }

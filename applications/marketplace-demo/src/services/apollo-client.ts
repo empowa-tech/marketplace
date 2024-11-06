@@ -1,6 +1,6 @@
 import { ApolloClient, HttpLink, InMemoryCache } from '@apollo/client'
 import { API_ENDPOINT, FALLBACK_ENDPOINT } from '@/constants'
-// import { onError } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 
 const cache = new InMemoryCache()
 const link = new HttpLink({
